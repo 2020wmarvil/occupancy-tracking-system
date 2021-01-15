@@ -21,7 +21,7 @@ URI = "mongodb+srv://%s:%s@cluster0.fmpvk.mongodb.net/customers?retryWrites=true
 print("[INFO] establishing connection to database...")
 
 conn = pymongo.MongoClient(URI)
-db = conn.get_database('occupancy_db')
+db = conn.get_database('customers')
 occupancies = db.occupancies
 
 # currently we are hard coding the only available location
