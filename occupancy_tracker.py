@@ -152,12 +152,12 @@ while True:
             # check to see if the object has been counted or not
             if not to.counted:
                 # if dir is negative and the line has been crossed decrement occupancy
-                if direction < 0 and centroid[1] < width // 2:
+                if direction < 0 and centroid[0] < width // 2:
                     occupancy -= 1
                     to.counted = True
                     occupancyChanged = True
                 # if dir is positive and the line has been crossed increment occupancy
-                elif direction > 0 and centroid[1] > width // 2:
+                elif direction > 0 and centroid[0] > width // 2:
                     occupancy += 1
                     to.counted = True
                     occupancyChanged = True
