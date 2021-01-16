@@ -27,6 +27,14 @@ def refreshLine(collection):
 
     return line
 
+def sendSMS(number, body):
+    number = str(int(number))
+    print(number)
+    message = client.messages.create(
+        to="+1" + number, 
+        from_="+17262684714",
+        body=body)
+
 # create the database URI from the .env data
 URI = "mongodb+srv://%s:%s@cluster0.fmpvk.mongodb.net/customers?retryWrites=true&w=majority" \
     % (os.getenv("USER"), urllib.parse.quote_plus(str(os.getenv("PASS"))))
@@ -54,11 +62,6 @@ account_sid = os.getenv('TWILIO_ACCOUNT_SID')
 auth_token  = os.getenv('TWILIO_AUTH_TOKEN')
 
 client = Client(account_sid, auth_token)
-
-message = client.messages.create(
-    to="+15714420642", 
-    from_="+17262684714",
-    body="Hello from Python!")
 
 # load the object detection model
 print("[INFO] loading model...")
@@ -189,19 +192,28 @@ while True:
                     occupancy -= 1
                     to.counted = True
                     occupancyChanged = True
+
+                    # when someone exits, notify the next 3 people in line
+                    if len(line) >= 1:
+                        sendSMS(line[0]['phone'], "Thank you for waiting. You may now enter the store.")
+                    if len(line) >= 2:
+                        sendSMS(line[1]['phone'], "You are now next in line. Please prepare to enter.")
+                    if len(line) >= 3:
+                        sendSMS(line[2]['phone'], "You are now second in line.")
                 # if dir is positive and the line has been crossed increment occupancy
                 elif direction < 0 and centroid[0] > width // 2:
                     occupancy += 1
                     to.counted = True
                     occupancyChanged = True
 
-                    # assume the person entering is next in line, and remove them from the line and database
+                    # if the line is not empty
                     if len(line):
+                        # send a confirmation that they have entered
+                        sendSMS(line[0]['phone'], "Thank you for waiting. Enjoy your stay.")
+
+                        # remove from the line and the db
                         reservations.delete_one({'_id': line[0]['_id']})
                         line.pop(0)
-                        
-                        # send a message like thanks for entering?
-
         
         # store the trackable object in the dictionary
         trackableObjects[objectID] = to
