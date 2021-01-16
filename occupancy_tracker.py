@@ -9,8 +9,9 @@ import time
 import dlib
 import cv2
 import urllib
-import os
 import pymongo
+from twilio.rest import Client
+import os
 
 def refreshLine(collection):
     print("[INFO] refreshing reservation queue...")
@@ -46,6 +47,18 @@ maxOccupancy = data['max_occupancy']
 
 # generate the list of reservations from the database
 line = refreshLine(reservations)
+
+# establish twilio connection
+print("[INFO] establishing connection to twilio...")
+account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+auth_token  = os.getenv('TWILIO_AUTH_TOKEN')
+
+client = Client(account_sid, auth_token)
+
+message = client.messages.create(
+    to="+15714420642", 
+    from_="+17262684714",
+    body="Hello from Python!")
 
 # load the object detection model
 print("[INFO] loading model...")
@@ -186,6 +199,8 @@ while True:
                     if len(line):
                         reservations.delete_one({'_id': line[0]['_id']})
                         line.pop(0)
+                        
+                        # send a message like thanks for entering?
 
         
         # store the trackable object in the dictionary
