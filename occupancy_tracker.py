@@ -13,19 +13,19 @@ import pymongo
 from twilio.rest import Client
 import os
 
-def refreshLine(collection):
+def refreshLine(line, collection):
     print("[INFO] refreshing reservation queue...")
-    line = []
 
     # query the database for all reservations
     documents = collection.find({})
     for doc in documents:
-        line.append(doc)
+        # send an sms message to any new reservations
+        if doc['_id'] not in [x['_id'] for x in line]:
+            line.append(doc)
+            sendSMS(doc['phone'], "Thank you for getting in line. You are #" + str(collection.count()) +" in line.")
 
     # sort by datetime created
     line.sort(key=lambda x: x['createdAt'])
-
-    return line
 
 def sendSMS(number, body):
     number = str(int(number))
@@ -38,6 +38,13 @@ def sendSMS(number, body):
 # create the database URI from the .env data
 URI = "mongodb+srv://%s:%s@cluster0.fmpvk.mongodb.net/customers?retryWrites=true&w=majority" \
     % (os.getenv("USER"), urllib.parse.quote_plus(str(os.getenv("PASS"))))
+
+# establish twilio connection
+print("[INFO] establishing connection to twilio...")
+account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+auth_token  = os.getenv('TWILIO_AUTH_TOKEN')
+
+client = Client(account_sid, auth_token)
 
 # establish database connection
 print("[INFO] establishing connection to database...")
@@ -54,14 +61,8 @@ occupancy = data['occupancy']
 maxOccupancy = data['max_occupancy']
 
 # generate the list of reservations from the database
-line = refreshLine(reservations)
-
-# establish twilio connection
-print("[INFO] establishing connection to twilio...")
-account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-auth_token  = os.getenv('TWILIO_AUTH_TOKEN')
-
-client = Client(account_sid, auth_token)
+line = []
+refreshLine(line, reservations)
 
 # load the object detection model
 print("[INFO] loading model...")
@@ -114,7 +115,7 @@ while True:
 
     # refresh the reservations list every 120 frames
     if refreshFrames > 120:
-        line = refreshLine(reservations)
+        refreshLine(line, reservations)
         refreshFrames = 0
 
     # run the object detection every 30 frames
