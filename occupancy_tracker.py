@@ -8,10 +8,23 @@ import imutils
 import time
 import dlib
 import cv2
-
-import os
 import urllib
+import os
 import pymongo
+
+def refreshLine(collection):
+    print("[INFO] refreshing reservation queue...")
+    line = []
+
+    # query the database for all reservations
+    documents = collection.find({})
+    for doc in documents:
+        line.append(doc)
+
+    # sort by datetime created
+    line.sort(key=lambda x: x['createdAt'])
+
+    return line
 
 # create the database URI from the .env data
 URI = "mongodb+srv://%s:%s@cluster0.fmpvk.mongodb.net/customers?retryWrites=true&w=majority" \
@@ -23,12 +36,16 @@ print("[INFO] establishing connection to database...")
 conn = pymongo.MongoClient(URI)
 db = conn.get_database('customers')
 occupancies = db.occupancies
+reservations = db.datas
 
 # currently we are hard coding the only available location
 LOC = 'marvil_home'
 data = occupancies.find_one({'location':LOC})
 occupancy = data['occupancy']
 maxOccupancy = data['max_occupancy']
+
+# generate the list of reservations from the database
+line = refreshLine(reservations)
 
 # load the object detection model
 print("[INFO] loading model...")
@@ -59,11 +76,8 @@ cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
 cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
 width, height = None, None
-numFrames = 0
+detectionFrames, refreshFrames = 0, 0
 occupancyChanged = False
-
-# only run the detection every 30 frames for performance
-skipFrames = 30
 
 fps = FPS().start()
 
@@ -73,7 +87,8 @@ while True:
 
     # cap frame size at 500 to improve performance
     frame = imutils.resize(frame, width=500)
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    rgb = frame
 
     if width is None and height is None:
         (height, width) = frame.shape[:2]
@@ -81,8 +96,13 @@ while True:
     status = "Waiting"
     rects = []
 
-    # check if its time to run the detection
-    if numFrames > skipFrames:
+    # refresh the reservations list every 120 frames
+    if refreshFrames > 120:
+        line = refreshLine(reservations)
+        refreshFrames = 0
+
+    # run the object detection every 30 frames
+    if detectionFrames > 30:
         status = "Detecting"
         trackers = []
 
@@ -114,7 +134,7 @@ while True:
                 tracker.start_track(rgb, rect)
                 trackers.append(tracker)
 
-        numFrames = 0
+        detectionFrames = 0
     else:
         # loop over the trackers
         for tracker in trackers:
@@ -152,12 +172,12 @@ while True:
             # check to see if the object has been counted or not
             if not to.counted:
                 # if dir is negative and the line has been crossed decrement occupancy
-                if direction < 0 and centroid[0] < width // 2:
+                if direction > 0 and centroid[0] < width // 2:
                     occupancy -= 1
                     to.counted = True
                     occupancyChanged = True
                 # if dir is positive and the line has been crossed increment occupancy
-                elif direction > 0 and centroid[0] > width // 2:
+                elif direction < 0 and centroid[0] > width // 2:
                     occupancy += 1
                     to.counted = True
                     occupancyChanged = True
@@ -168,8 +188,7 @@ while True:
         # draw both the ID of the object and the centroid of the object on the output frame
         text = "ID {}".format(objectID)
         cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
-    
+        cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)    
 
     # display information
     text = "Occupancy: " + str(occupancy) + "/" + str(maxOccupancy)
@@ -186,7 +205,8 @@ while True:
     if cv2.waitKey(1) & 0xFF == 27:
         break
 
-    numFrames += 1
+    refreshFrames += 1
+    detectionFrames += 1
     fps.update()
 
 # stop the timer and display FPS information
