@@ -172,7 +172,7 @@ while True:
             # check to see if the object has been counted or not
             if not to.counted:
                 # if dir is negative and the line has been crossed decrement occupancy
-                if direction > 0 and centroid[0] < width // 2:
+                if direction > 0 and centroid[0] < width // 2 and occupancy > 0:
                     occupancy -= 1
                     to.counted = True
                     occupancyChanged = True
@@ -181,6 +181,12 @@ while True:
                     occupancy += 1
                     to.counted = True
                     occupancyChanged = True
+
+                    # assume the person entering is next in line, and remove them from the line and database
+                    if len(line):
+                        reservations.delete_one({'_id': line[0]['_id']})
+                        line.pop(0)
+
         
         # store the trackable object in the dictionary
         trackableObjects[objectID] = to

@@ -11,6 +11,7 @@ numpy = "*"
 scipy = "*"
 pymongo = "*"
 dnspython = "*"
+twilio = "*"
 
 [dev-packages]
 
