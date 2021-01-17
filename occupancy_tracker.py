@@ -196,7 +196,7 @@ while True:
 
                     # when someone exits, notify the next 3 people in line
                     if len(line) >= 1:
-                        sendSMS(line[0]['phone'], "Thank you for waiting. You may now enter the store.")
+                        sendSMS(line[0]['phone'], "You may now enter the store. Please arrive within five minutes to avoid losing your reservation.")
                     if len(line) >= 2:
                         sendSMS(line[1]['phone'], "You are now next in line. Please prepare to enter.")
                     if len(line) >= 3:
@@ -210,7 +210,8 @@ while True:
                     # if the line is not empty
                     if len(line):
                         # send a confirmation that they have entered
-                        sendSMS(line[0]['phone'], "Thank you for waiting. Enjoy your stay.")
+                        sendSMS(line[0]['phone'], "The OTIS vision system has checked you in. Thank you for waiting and enjoy your stay. \
+                            If you have not entered and think this is a mistake, please contact 571-442-0642 for assistance.")
 
                         # remove from the line and the db
                         reservations.delete_one({'_id': line[0]['_id']})
