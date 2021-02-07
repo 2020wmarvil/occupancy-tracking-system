@@ -1,6 +1,5 @@
 # occupancy-tracking-system
-An occupancy tracking system built in python using MongoDB Atlas
-
+An occupancy tracking system built in python using OpenCV, MongoDB Atlas, and Twilio
 
 To Run
 - `$ pipenv shell`
